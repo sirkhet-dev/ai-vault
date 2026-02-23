@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  aivault:
+  ai-vault:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -11,8 +11,8 @@ services:
       - ../.env
     volumes:
       - ../vault:/app/vault
-      - aivault-data:/app/data
+      - ai-vault-data:/app/data
     restart: unless-stopped
 
 volumes:
-  aivault-data:
+  ai-vault-data:

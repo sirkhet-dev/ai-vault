@@ -1,13 +1,13 @@
 [Unit]
-Description=AIVault - AI-powered knowledge vault
+Description=AI Vault - AI-powered knowledge vault
 After=network.target
 
 [Service]
 Type=simple
-User=aivault
-WorkingDirectory=/opt/aivault
+User=ai-vault
+WorkingDirectory=/opt/ai-vault
 ExecStart=/usr/bin/node dist/index.js
-EnvironmentFile=/opt/aivault/.env
+EnvironmentFile=/opt/ai-vault/.env
 Restart=always
 RestartSec=10
 

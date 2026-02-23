@@ -30,8 +30,8 @@ export class OpenRouterAPIProvider implements LLMProvider {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${config.OPENROUTER_API_KEY}`,
-          'HTTP-Referer': 'https://github.com/sirkhet-dev/aivault',
-          'X-Title': 'AIVault',
+          'HTTP-Referer': 'https://github.com/sirkhet-dev/ai-vault',
+          'X-Title': 'AI Vault',
         },
         body: JSON.stringify({
           model: config.OPENROUTER_MODEL,

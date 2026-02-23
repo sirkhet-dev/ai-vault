@@ -1,11 +1,11 @@
 {
-  "name": "aivault",
-  "version": "0.1.0",
+  "name": "ai-vault",
+  "version": "1.5.0",
   "description": "AI-powered knowledge vault with multi-LLM support, Telegram bot, REST API, and CLI",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "aivault": "dist/index.js"
+    "ai-vault": "dist/index.js"
   },
   "scripts": {
     "dev": "tsx src/index.ts",

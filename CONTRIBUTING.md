@@ -1,4 +1,4 @@
-# Contributing to AIVault
+# Contributing to AI Vault
 
 Thanks for your interest in contributing!
 

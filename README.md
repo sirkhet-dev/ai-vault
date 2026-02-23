@@ -1,12 +1,13 @@
-# AIVault
+# AI Vault
 
 **AI-powered knowledge vault with multi-LLM support.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.5.0-2ea043)](package.json)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green.svg)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://typescriptlang.org)
 
-AIVault combines a **Telegram bot**, **REST API**, and **CLI REPL** with a Markdown-based knowledge vault. Switch between LLM providers on the fly, save conversations as structured notes, search your vault, and get automatic weekly digests.
+AI Vault combines a **Telegram bot**, **REST API**, and **CLI REPL** with a Markdown-based knowledge vault. Switch between LLM providers on the fly, save conversations as structured notes, search your vault, and get automatic weekly digests.
 
 ```
 Telegram / REST API / CLI  -->  Engine  -->  LLM Providers  -->  Markdown Vault
@@ -25,8 +26,8 @@ Telegram / REST API / CLI  -->  Engine  -->  LLM Providers  -->  Markdown Vault
 ## Quick Start
 
 ```bash
-git clone https://github.com/sirkhet-dev/aivault.git
-cd aivault
+git clone https://github.com/sirkhet-dev/ai-vault.git
+cd ai-vault
 npm install
 cp .env.example .env
 # Edit .env with your tokens/keys
@@ -46,6 +47,22 @@ cd docker
 docker compose up
 ```
 
+## Development
+
+```bash
+npm run dev        # Run all enabled interfaces
+npm run cli        # CLI-only mode
+npm run typecheck  # Type validation
+npm run build      # Compile TypeScript
+```
+
+## Security Defaults
+
+- API access is blocked unless `API_KEY` is set or `API_ALLOW_ANONYMOUS=true`
+- Telegram access is blocked unless `TELEGRAM_ALLOWED_USERS` is configured or `TELEGRAM_ALLOW_PUBLIC=true`
+- Vault note paths are constrained to `brainstorm|active|archive` and `.md` filenames
+- API enforces request body size limits and in-memory per-IP+path rate limiting
+
 ## Configuration
 
 See [`.env.example`](.env.example) for all options. Key settings:
@@ -54,7 +71,12 @@ See [`.env.example`](.env.example) for all options. Key settings:
 |----------|-------------|---------|
 | `DEFAULT_PROVIDER` | LLM provider to use | `claude-cli` |
 | `TELEGRAM_ENABLED` | Enable Telegram bot | `true` |
+| `TELEGRAM_ALLOW_PUBLIC` | Allow all Telegram users if allowlist empty | `false` |
 | `API_ENABLED` | Enable REST API | `true` |
+| `API_ALLOW_ANONYMOUS` | Allow API access without `API_KEY` | `false` |
+| `API_MAX_BODY_BYTES` | Maximum JSON body size accepted by API | `1048576` |
+| `API_RATE_LIMIT_MAX` | Max requests per window per IP+path | `60` |
+| `API_RATE_LIMIT_WINDOW_MS` | Rate-limit window size in milliseconds | `60000` |
 | `CLI_ENABLED` | Enable CLI REPL | `true` |
 | `SINGLE_USER_MODE` | Skip auth, use root vault | `false` |
 
@@ -92,7 +114,7 @@ Browse all available models at [openrouter.ai/models](https://openrouter.ai/mode
 
 ## REST API
 
-All endpoints require `Authorization: Bearer <API_KEY>` header (if `API_KEY` is set).
+All endpoints require `Authorization: Bearer <API_KEY>` by default. You can explicitly allow anonymous API access with `API_ALLOW_ANONYMOUS=true`.
 
 ```
 POST   /api/v1/chat                    Send a prompt

@@ -1,4 +1,5 @@
 import type { Context } from 'hono';
+import { z } from 'zod';
 import { config } from '../../config.js';
 import { execute } from '../../core/engine.js';
 import { getSession, resetSession, setProvider } from '../../core/session.js';
@@ -8,6 +9,62 @@ import * as vault from '../../vault/manager.js';
 import { search } from '../../vault/search.js';
 import type { VaultCategory } from '../../types.js';
 
+const categorySchema = z.enum(['brainstorm', 'active', 'archive']);
+
+const chatSchema = z.object({
+  message: z.string().min(1),
+  provider: z.string().optional(),
+});
+
+const createNoteSchema = z.object({
+  category: categorySchema,
+  title: z.string().min(1),
+  body: z.string().min(1),
+  tags: z.array(z.string().min(1)).max(32).optional(),
+});
+
+const updateNoteSchema = z.object({
+  body: z.string().min(1),
+});
+
+const searchSchema = z.object({
+  query: z.string().min(1),
+  category: categorySchema.optional(),
+  tags: z.array(z.string().min(1)).max(32).optional(),
+  limit: z.number().int().positive().max(100).optional(),
+});
+
+const saveFromChatSchema = z.object({
+  category: categorySchema.optional(),
+  title: z.string().min(1).max(200).optional(),
+});
+
+const setProviderSchema = z.object({
+  provider: z.string().min(1),
+});
+
+async function parseJson<T>(c: Context, schema: z.ZodSchema<T>): Promise<{ ok: true; data: T } | { ok: false; response: Response }> {
+  try {
+    const raw = await c.req.json();
+    const parsed = schema.safeParse(raw);
+    if (!parsed.success) {
+      return { ok: false, response: c.json({ error: 'Invalid request body', details: parsed.error.flatten() }, 400) };
+    }
+    return { ok: true, data: parsed.data };
+  } catch {
+    return { ok: false, response: c.json({ error: 'Invalid JSON body' }, 400) };
+  }
+}
+
+function decodePathParam(param: string | undefined): string | null {
+  if (!param) return null;
+  try {
+    return decodeURIComponent(param);
+  } catch {
+    return null;
+  }
+}
+
 function getUserId(c: Context): string {
   return c.get('userId') ?? 'api_anonymous';
 }
@@ -15,11 +72,9 @@ function getUserId(c: Context): string {
 // POST /api/v1/chat
 export async function chatHandler(c: Context): Promise<Response> {
   const userId = getUserId(c);
-  const body = await c.req.json<{ message: string; provider?: string }>();
-
-  if (!body.message) {
-    return c.json({ error: 'message is required' }, 400);
-  }
+  const parsed = await parseJson(c, chatSchema);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const result = await execute({
     userId,
@@ -50,10 +105,10 @@ export async function listNotesHandler(c: Context): Promise<Response> {
 // GET /api/v1/vault/notes/:filepath
 export async function getNoteHandler(c: Context): Promise<Response> {
   const userId = getUserId(c);
-  const filepath = c.req.param('filepath');
+  const filepath = decodePathParam(c.req.param('filepath'));
   if (!filepath) return c.json({ error: 'filepath is required' }, 400);
 
-  const note = await vault.getNote(userId, decodeURIComponent(filepath));
+  const note = await vault.getNote(userId, filepath);
   if (!note) return c.json({ error: 'Note not found' }, 404);
   return c.json({ note });
 }
@@ -61,16 +116,9 @@ export async function getNoteHandler(c: Context): Promise<Response> {
 // POST /api/v1/vault/notes
 export async function createNoteHandler(c: Context): Promise<Response> {
   const userId = getUserId(c);
-  const body = await c.req.json<{
-    category: VaultCategory;
-    title: string;
-    body: string;
-    tags?: string[];
-  }>();
-
-  if (!body.category || !body.title || !body.body) {
-    return c.json({ error: 'category, title, and body are required' }, 400);
-  }
+  const parsed = await parseJson(c, createNoteSchema);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const filepath = await vault.createNote(userId, body.category, body.title, body.body, body.tags);
   return c.json({ filepath }, 201);
@@ -79,13 +127,14 @@ export async function createNoteHandler(c: Context): Promise<Response> {
 // PUT /api/v1/vault/notes/:filepath
 export async function updateNoteHandler(c: Context): Promise<Response> {
   const userId = getUserId(c);
-  const filepath = c.req.param('filepath');
+  const filepath = decodePathParam(c.req.param('filepath'));
   if (!filepath) return c.json({ error: 'filepath is required' }, 400);
 
-  const body = await c.req.json<{ body: string }>();
-  if (!body.body) return c.json({ error: 'body is required' }, 400);
+  const parsed = await parseJson(c, updateNoteSchema);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
-  const updated = await vault.updateNote(userId, decodeURIComponent(filepath), body.body);
+  const updated = await vault.updateNote(userId, filepath, body.body);
   if (!updated) return c.json({ error: 'Note not found' }, 404);
   return c.json({ ok: true });
 }
@@ -93,10 +142,10 @@ export async function updateNoteHandler(c: Context): Promise<Response> {
 // DELETE /api/v1/vault/notes/:filepath
 export async function deleteNoteHandler(c: Context): Promise<Response> {
   const userId = getUserId(c);
-  const filepath = c.req.param('filepath');
+  const filepath = decodePathParam(c.req.param('filepath'));
   if (!filepath) return c.json({ error: 'filepath is required' }, 400);
 
-  const deleted = await vault.deleteNote(userId, decodeURIComponent(filepath));
+  const deleted = await vault.deleteNote(userId, filepath);
   if (!deleted) return c.json({ error: 'Note not found' }, 404);
   return c.json({ ok: true });
 }
@@ -104,14 +153,9 @@ export async function deleteNoteHandler(c: Context): Promise<Response> {
 // POST /api/v1/vault/search
 export async function searchHandler(c: Context): Promise<Response> {
   const userId = getUserId(c);
-  const body = await c.req.json<{
-    query: string;
-    category?: VaultCategory;
-    tags?: string[];
-    limit?: number;
-  }>();
-
-  if (!body.query) return c.json({ error: 'query is required' }, 400);
+  const parsed = await parseJson(c, searchSchema);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const results = await search(userId, body.query, {
     category: body.category,
@@ -124,10 +168,9 @@ export async function searchHandler(c: Context): Promise<Response> {
 // POST /api/v1/vault/save
 export async function saveFromChatHandler(c: Context): Promise<Response> {
   const userId = getUserId(c);
-  const body = await c.req.json<{
-    category?: VaultCategory;
-    title?: string;
-  }>();
+  const parsed = await parseJson(c, saveFromChatSchema);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const session = getSession(userId, config.DEFAULT_PROVIDER);
   const lastMessages = session.messageHistory.slice(-2);
@@ -170,9 +213,9 @@ export async function providersHandler(c: Context): Promise<Response> {
 // PUT /api/v1/provider
 export async function setProviderHandler(c: Context): Promise<Response> {
   const userId = getUserId(c);
-  const body = await c.req.json<{ provider: string }>();
-
-  if (!body.provider) return c.json({ error: 'provider is required' }, 400);
+  const parsed = await parseJson(c, setProviderSchema);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const provider = getProvider(body.provider);
   if (!provider) return c.json({ error: 'Unknown provider' }, 404);

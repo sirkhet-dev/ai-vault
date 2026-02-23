@@ -46,7 +46,7 @@ export function handleCommand(input: string): CommandResult | null {
 }
 
 function helpText(): string {
-  return `${formatHeader('AIVault CLI Commands')}
+  return `${formatHeader('AI Vault CLI Commands')}
 
   /new              Start a new conversation
   /stop             Cancel current request

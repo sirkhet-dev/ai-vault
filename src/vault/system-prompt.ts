@@ -41,7 +41,7 @@ export async function buildSystemPrompt(userId: UserId): Promise<string> {
   return basePrompt;
 }
 
-const DEFAULT_SYSTEM_PROMPT = `You are AIVault, an AI-powered knowledge assistant.
+const DEFAULT_SYSTEM_PROMPT = `You are AI Vault, an AI-powered knowledge assistant.
 
 You help users:
 - Think through ideas and problems

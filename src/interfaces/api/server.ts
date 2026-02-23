@@ -13,7 +13,7 @@ export class APIInterface implements AppInterface {
     const app = new Hono();
 
     // Health check
-    app.get('/health', (c) => c.json({ status: 'ok', version: '0.1.0' }));
+    app.get('/health', (c) => c.json({ status: 'ok', version: '1.5.0' }));
 
     // API v1 routes
     app.route('/api/v1', createApiRoutes());

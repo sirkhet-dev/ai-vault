@@ -6,7 +6,7 @@ import type { AppInterface } from './interfaces/types.js';
 const interfaces: AppInterface[] = [];
 
 async function start(): Promise<void> {
-  logger.info('AIVault starting...');
+  logger.info('AI Vault starting...');
 
   // Initialize providers
   await initProviders();
@@ -61,7 +61,7 @@ async function start(): Promise<void> {
   } else {
     logger.info(
       { interfaces: interfaces.map((i) => i.name) },
-      'AIVault is running',
+      'AI Vault is running',
     );
   }
 }
@@ -82,6 +82,6 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
 start().catch((err) => {
-  logger.fatal({ err }, 'Failed to start AIVault');
+  logger.fatal({ err }, 'Failed to start AI Vault');
   process.exit(1);
 });

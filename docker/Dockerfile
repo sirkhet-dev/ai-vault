@@ -1,25 +1,34 @@
-FROM node:20-slim
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Install dependencies
 COPY package.json package-lock.json ./
-RUN npm ci --production
+RUN npm ci
 
-# Copy source
 COPY tsconfig.json ./
 COPY src/ ./src/
 COPY vault/ ./vault/
 COPY templates/ ./templates/
 
-# Build
 RUN npm run build
 
-# Create data directory
-RUN mkdir -p /app/data
+FROM node:20-slim AS runtime
 
-EXPOSE 3000
+WORKDIR /app
 
 ENV NODE_ENV=production
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/vault ./vault
+COPY --from=builder /app/templates ./templates
+
+RUN mkdir -p /app/data && chown -R node:node /app
+
+USER node
+
+EXPOSE 3000
 
 CMD ["node", "dist/index.js"]

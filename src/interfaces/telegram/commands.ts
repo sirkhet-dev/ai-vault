@@ -16,7 +16,7 @@ function escapeHtml(text: string): string {
 export async function startCommand(ctx: Context): Promise<void> {
   const providers = listProviders().map((p) => `  - <code>${escapeHtml(p.id)}</code> (${escapeHtml(p.name)})`).join('\n');
   await ctx.reply(
-    `<b>Welcome to AIVault</b>\n\n` +
+    `<b>Welcome to AI Vault</b>\n\n` +
     `Your AI-powered knowledge vault. Send any message to start a conversation.\n\n` +
     `<b>Available providers:</b>\n${providers}\n\n` +
     `Use /help to see all commands.`,
@@ -26,7 +26,7 @@ export async function startCommand(ctx: Context): Promise<void> {
 
 export async function helpCommand(ctx: Context): Promise<void> {
   await ctx.reply(
-    `<b>AIVault Commands</b>\n\n` +
+    `<b>AI Vault Commands</b>\n\n` +
     `/start — Welcome message\n` +
     `/new — Start a new conversation\n` +
     `/stop — Cancel current request\n` +

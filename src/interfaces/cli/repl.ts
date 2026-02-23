@@ -22,7 +22,7 @@ export class CLIInterface implements AppInterface {
       output: process.stdout,
     });
 
-    console.log(formatHeader('\n  AIVault CLI'));
+    console.log(formatHeader('\n  AI Vault CLI'));
     console.log('  Type /help for commands, /quit to exit.\n');
 
     this.prompt();

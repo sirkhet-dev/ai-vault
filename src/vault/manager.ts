@@ -23,6 +23,28 @@ function ensureVaultDirs(vaultPath: string): void {
   }
 }
 
+function resolveSafeVaultPath(vaultPath: string, filepath: string): { fullPath: string; normalizedPath: string; category: VaultCategory } | null {
+  const normalized = filepath.replace(/\\/g, '/').replace(/^\/+/, '');
+  const parts = normalized.split('/').filter(Boolean);
+  if (parts.length !== 2) return null;
+
+  const [rawCategory, filename] = parts;
+  if (!['brainstorm', 'active', 'archive'].includes(rawCategory)) return null;
+  if (!filename.endsWith('.md') || filename.includes('/') || filename.includes('..')) return null;
+
+  const category = rawCategory as VaultCategory;
+  const fullPath = path.resolve(vaultPath, category, filename);
+  const baseDir = path.resolve(vaultPath, category) + path.sep;
+
+  if (!fullPath.startsWith(baseDir)) return null;
+
+  return {
+    fullPath,
+    normalizedPath: `${category}/${filename}`,
+    category,
+  };
+}
+
 export async function listNotes(
   userId: UserId,
   category?: VaultCategory,
@@ -69,19 +91,19 @@ export async function listNotes(
 
 export async function getNote(userId: UserId, filepath: string): Promise<Note | null> {
   const vaultPath = getVaultPath(userId);
-  const fullPath = path.join(vaultPath, filepath);
+  const resolved = resolveSafeVaultPath(vaultPath, filepath);
+  if (!resolved) return null;
 
-  if (!fs.existsSync(fullPath)) return null;
+  if (!fs.existsSync(resolved.fullPath)) return null;
 
-  const raw = fs.readFileSync(fullPath, 'utf-8');
+  const raw = fs.readFileSync(resolved.fullPath, 'utf-8');
   const parsed = matter(raw);
-  const category = filepath.split('/')[0] as VaultCategory;
 
   return {
-    filepath,
+    filepath: resolved.normalizedPath,
     metadata: {
-      title: parsed.data.title ?? path.basename(filepath, '.md'),
-      category,
+      title: parsed.data.title ?? path.basename(resolved.normalizedPath, '.md'),
+      category: resolved.category,
       tags: parsed.data.tags ?? [],
       created: parsed.data.created ?? '',
       updated: parsed.data.updated ?? '',
@@ -113,27 +135,29 @@ export async function createNote(
 
 export async function updateNote(userId: UserId, filepath: string, body: string): Promise<boolean> {
   const vaultPath = getVaultPath(userId);
-  const fullPath = path.join(vaultPath, filepath);
+  const resolved = resolveSafeVaultPath(vaultPath, filepath);
+  if (!resolved) return false;
 
-  if (!fs.existsSync(fullPath)) return false;
+  if (!fs.existsSync(resolved.fullPath)) return false;
 
-  const raw = fs.readFileSync(fullPath, 'utf-8');
+  const raw = fs.readFileSync(resolved.fullPath, 'utf-8');
   const parsed = matter(raw);
   parsed.data.updated = new Date().toISOString();
 
   const newContent = `${generateFrontmatter(parsed.data as NoteMetadata)}\n\n${body}`;
-  fs.writeFileSync(fullPath, newContent, 'utf-8');
+  fs.writeFileSync(resolved.fullPath, newContent, 'utf-8');
   return true;
 }
 
 export async function deleteNote(userId: UserId, filepath: string): Promise<boolean> {
   const vaultPath = getVaultPath(userId);
-  const fullPath = path.join(vaultPath, filepath);
+  const resolved = resolveSafeVaultPath(vaultPath, filepath);
+  if (!resolved) return false;
 
-  if (!fs.existsSync(fullPath)) return false;
+  if (!fs.existsSync(resolved.fullPath)) return false;
 
-  fs.unlinkSync(fullPath);
-  logger.debug({ filepath, userId }, 'Note deleted');
+  fs.unlinkSync(resolved.fullPath);
+  logger.debug({ filepath: resolved.normalizedPath, userId }, 'Note deleted');
   return true;
 }
 
